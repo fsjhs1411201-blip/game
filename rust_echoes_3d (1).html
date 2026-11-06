@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>《鏽蝕迴響 Rust Echoes》- 3D廢土極速連擊開放世界動作遊戲</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sun: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706'
+                        },
+                        rust: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c'
+                        },
+                        emp: {
+                            light: '#e0f7fa',
+                            DEFAULT: '#06b6d4',
+                            dark: '#0e7490'
+                        },
+                        bio: {
+                            light: '#f0fdf4',
+                            DEFAULT: '#16a34a',
+                            dark: '#15803d'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #fafaf9;
+            color: #1c1917;
+            font-family: 'Inter', system-ui, sans-serif;
+            user-select: none;
+        }
+
+        /* Light Mode Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+        }
+
+        .glow-orange { filter: drop-shadow(0 4px 12px rgba(249, 115, 22, 0.35)); }
+        .glow-cyan { filter: drop-shadow(0 4px 12px rgba(6, 182, 212, 0.35)); }
+        .glow-green { filter: drop-shadow(0 4px 12px rgba(22, 163, 74, 0.35)); }
+
+        .pulse-soft {
+            animation: pulse-animation 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.04); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased selection:bg-orange-500 selection:text-white">
+
+    <!-- 1. Sticky Navigation Bar -->
+    <nav class="sticky top-0 z-50 glass-nav border-b border-stone-200/80 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Brand Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/20 group-hover:scale-105 transition transform">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-black text-lg text-stone-900 tracking-wider flex items-center gap-2">
+                            鏽蝕迴響 <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-200">3D</span>
+                        </span>
+                        <span class="text-[10px] text-stone-500 font-mono tracking-widest uppercase">RUST ECHOES</span>
+                    </div>
+                </a>
+
+                <!-- Desktop Nav Links -->
+                <div class="hidden md:flex items-center space-x-8 font-semibold text-sm text-stone-600">
+                    <a href="#worldview" class="hover:text-orange-600 transition">廢土世界</a>
+                    <a href="#squad" class="hover:text-orange-600 transition">三人小隊</a>
+                    <a href="#combat" class="hover:text-orange-600 transition">連擊矩陣</a>
+                    <a href="#demo-section" class="hover:text-orange-600 transition">3D 實機試玩</a>
+                </div>
+
+                <!-- CTA Play Button -->
+                <div class="flex items-center gap-3">
+                    <a href="#demo-section" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105 active:scale-95 transition">
+                        <i class="fa-solid fa-gamepad mr-1.5"></i> 立即體驗
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 2. Hero Section -->
+    <section class="relative overflow-hidden bg-gradient-to-b from-amber-50/60 via-stone-50 to-stone-50 pt-12 pb-20 lg:pt-20 lg:pb-28">
+        <!-- Background Decorative Orbs -->
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-200/40 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/3 right-10 w-96 h-96 bg-cyan-200/30 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto space-y-6">
+                <!-- Visual Icon Badges -->
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-stone-200 shadow-sm text-xs font-bold text-stone-700">
+                    <span class="text-orange-500 text-sm">🔥</span>
+                    <span>低文字 ‧ 高視覺 ‧ 3D 廢土極速動作</span>
+                    <span class="text-cyan-500 text-sm">⚡</span>
+                </div>
+
+                <!-- Main Hero Headline -->
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 tracking-tight leading-tight">
+                    極速殘影連擊<br>
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-amber-500 to-yellow-500">
+                        無 UI 體表大招視覺戰鬥
+                    </span>
+                </h1>
+
+                <p class="text-base sm:text-lg text-stone-600 leading-relaxed">
+                    捨棄繁瑣數字與文字對話，完全依賴動態 Icon 與 3D 角色身體視覺變化。切換角色即刻留下戰術裝置，打出連鎖反應！
+                </p>
+
+                <!-- Hero Action Buttons -->
+                <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <a href="#demo-section" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-stone-900 text-white font-bold text-base shadow-xl shadow-stone-900/10 hover:bg-stone-800 hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play text-orange-400"></i>
+                        進入 3D 沙盒試玩
+                    </a>
+                    <a href="#squad" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white border border-stone-200 text-stone-800 font-bold text-base shadow-sm hover:bg-stone-100 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-users text-stone-500"></i>
+                        探索廢土小隊
+                    </a>
+                </div>
+
+                <!-- Quick Feature Badges -->
+                <div class="pt-10 grid grid-cols-3 gap-3 sm:gap-6 text-left">
+                    <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl shrink-0">
+                            ⚙️
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs sm:text-sm text-stone-900">戰術殘影 (Phantom)</h4>
+                            <p class="text-[11px] text-stone-500 hidden sm:block">切換留在原地形成打擊點</p>
+                        </div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center text-xl shrink-0">
+                            ⚡
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs sm:text-sm text-stone-900">異變連鎖反應</h4>
+                            <p class="text-[11px] text-stone-500 hidden sm:block">爆轟 / 衰變 / 溶岩腐蝕</p>
+                        </div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-xl shrink-0">
+                            ☣️
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs sm:text-sm text-stone-900">無 UI 體表大招</h4>
+                            <p class="text-[11px] text-stone-500 hidden sm:block">蒸氣過熱與生化異變指示</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Worldview & Core Vision Section -->
+    <section id="worldview" class="py-16 bg-white border-y border-stone-200/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-xs font-black uppercase tracking-widest text-orange-600">WORLDVIEW</span>
+                <h2 class="text-3xl font-black text-stone-900 mt-1">廢土冒險 ‧ 高視覺化系統</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- World Feature 1 -->
+                <div class="glass-card p-6 rounded-3xl space-y-4 hover:shadow-xl transition">
+                    <div class="w-14 h-14 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-icons"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">極簡動態 Icon 語言</h3>
+                    <p class="text-stone-600 text-sm leading-relaxed">
+                        徹底擺脫密密麻麻的文字數值面板，冷卻時間、元素附著、狀態異常全數轉換為即時圖示與符號跳動。
+                    </p>
+                </div>
+
+                <!-- World Feature 2 -->
+                <div class="glass-card p-6 rounded-3xl space-y-4 hover:shadow-xl transition">
+                    <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">切換即連擊 (Phantom Swap)</h3>
+                    <p class="text-stone-600 text-sm leading-relaxed">
+                        角色退場時不會直接消失，而是在 3D 場景中留下旋轉鋸片、電磁塔或生化毒池，引爆完美的「極速連動」。
+                    </p>
+                </div>
+
+                <!-- World Feature 3 -->
+                <div class="glass-card p-6 rounded-3xl space-y-4 hover:shadow-xl transition">
+                    <div class="w-14 h-14 rounded-2xl bg-green-500/10 text-green-600 flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-child-reaching"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">體表情境大招 (Diegetic Ult)</h3>
+                    <p class="text-stone-600 text-sm leading-relaxed">
+                        不看傳統能量條！觀察角色的背部蒸氣爐過熱發白、電磁環共振故障，或是異變手臂巨大化，瞬間掌握大招時機！
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Squad Characters Showcase Section -->
+    <section id="squad" class="py-20 bg-stone-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-xs font-black uppercase tracking-widest text-orange-600">SQUAD MEMBERS</span>
+                <h2 class="text-3xl sm:text-4xl font-black text-stone-900 mt-1">廢土極速小隊英雄</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Char 1: 赤鏽 -->
+                <div class="glass-card p-6 rounded-3xl border-t-4 border-orange-500 flex flex-col justify-between hover:shadow-2xl transition group">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-14 h-14 rounded-2xl bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 text-2xl font-black">
+                                🔥
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">近戰鋸刃 / 高溫</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-stone-900">赤鏽 (Rust-Blade)</h3>
+                        <p class="text-stone-600 text-sm">手持機械雙鋸刃，背負高壓蒸氣爐。負責撕裂敵方護甲與開啟連擊。</p>
+                        
+                        <div class="pt-2 space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">戰術殘影</span>
+                                <span class="text-orange-600 font-mono">🌀⚙️ 飛旋鋸片陣</span>
+                            </div>
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">體表大招視覺</span>
+                                <span class="text-stone-600 font-mono">蒸氣壓力爐過熱發白</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Char 2: 零號 -->
+                <div class="glass-card p-6 rounded-3xl border-t-4 border-cyan-500 flex flex-col justify-between hover:shadow-2xl transition group">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-14 h-14 rounded-2xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-cyan-600 text-2xl font-black">
+                                ⚡
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 text-xs font-bold">脈衝槍手 / 電磁</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-stone-900">零號 (Pulse-Zero)</h3>
+                        <p class="text-stone-600 text-sm">身覆全息面罩與電磁共振環，能對敵人群進行高頻高壓射擊與強控定身。</p>
+
+                        <div class="pt-2 space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">戰術殘影</span>
+                                <span class="text-cyan-600 font-mono">🧲🌐 電磁約束圈</span>
+                            </div>
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">體表大招視覺</span>
+                                <span class="text-stone-600 font-mono">電磁環高速擴散閃爍</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Char 3: 骸獸 -->
+                <div class="glass-card p-6 rounded-3xl border-t-4 border-green-500 flex flex-col justify-between hover:shadow-2xl transition group">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-14 h-14 rounded-2xl bg-green-100 border border-green-200 flex items-center justify-center text-green-600 text-2xl font-black">
+                                ☣️
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">生化重裝 / 輻射</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-stone-900">骸獸 (Bio-Beast)</h3>
+                        <p class="text-stone-600 text-sm">半機甲半生化異變巨臂，能引發大範圍生化酸蝕破壞與強烈震地破韌。</p>
+
+                        <div class="pt-2 space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">戰術殘影</span>
+                                <span class="text-green-600 font-mono">☣️🧪 生化酸蝕地帶</span>
+                            </div>
+                            <div class="flex justify-between p-2 rounded-xl bg-stone-100">
+                                <span class="font-bold text-stone-700">體表大招視覺</span>
+                                <span class="text-stone-600 font-mono">生化巨臂膨脹脈動</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Reaction Codex Section -->
+    <section id="combat" class="py-16 bg-white border-y border-stone-200/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-xs font-black uppercase tracking-widest text-orange-600">COMBAT MATRIX</span>
+                <h2 class="text-3xl font-black text-stone-900 mt-1">元素連擊反應矩陣</h2>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card p-5 rounded-2xl border border-orange-200/80 space-y-3">
+                    <div class="text-3xl">🔥 + ⚡</div>
+                    <h4 class="font-bold text-base text-stone-900">💥 引燃爆轟</h4>
+                    <p class="text-xs text-stone-600">強烈範圍火花衝擊波，徹底擊飛與破壞霸體。</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-cyan-200/80 space-y-3">
+                    <div class="text-3xl">⚡ + ☣️</div>
+                    <h4 class="font-bold text-base text-stone-900">⚡ 衰變超載</h4>
+                    <p class="text-xs text-stone-600">跳躍式高壓電弧連鎖，持續麻痺與跳字傷害。</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-green-200/80 space-y-3">
+                    <div class="text-3xl">🧪 + 🔥</div>
+                    <h4 class="font-bold text-base text-stone-900">🌋 溶岩腐蝕</h4>
+                    <p class="text-xs text-stone-600">融解地面形成持續腐蝕區域，大幅降低抗性。</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-yellow-200/80 space-y-3">
+                    <div class="text-3xl">⚙️ + 💥</div>
+                    <h4 class="font-bold text-base text-stone-900">⚡ 廢土共振</h4>
+                    <p class="text-xs text-stone-600">引爆 3D 戰術殘影，造成範圍二次毀滅重擊。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Playable 3D Arena Section (Embedded Canvas & HUD) -->
+    <section id="demo-section" class="py-12 bg-stone-100 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <span class="text-xs font-black uppercase tracking-widest text-orange-600">INTERACTIVE DEMO</span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-stone-900 flex items-center gap-2">
+                        <span>3D 戰場實機試玩</span>
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-300">角色可扣血模式</span>
+                    </h2>
+                </div>
+
+                <!-- Keyboard Direction Prompt -->
+                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-mono text-stone-600">
+                    <span class="font-bold text-stone-800">控制:</span>
+                    <span class="px-1.5 py-0.5 rounded bg-stone-100 border text-orange-600 font-bold">W (前)</span>
+                    <span class="px-1.5 py-0.5 rounded bg-stone-100 border">A (左)</span>
+                    <span class="px-1.5 py-0.5 rounded bg-stone-100 border">S (後)</span>
+                    <span class="px-1.5 py-0.5 rounded bg-stone-100 border">D (右)</span>
+                </div>
+            </div>
+
+            <!-- 3D Playable Viewport Container -->
+            <div class="relative w-full h-[580px] sm:h-[650px] rounded-3xl overflow-hidden border-2 border-stone-300 shadow-2xl bg-amber-50/50">
+                
+                <!-- 3D WebGL Canvas -->
+                <div id="webgl-container" class="w-full h-full absolute inset-0"></div>
+
+                <!-- Top Light Game HUD Overlay -->
+                <div class="absolute top-0 left-0 right-0 p-4 pointer-events-none flex justify-between items-start z-10">
+                    
+                    <!-- Player Health & Active Character HUD -->
+                    <div class="pointer-events-auto flex items-center gap-3 bg-white/90 backdrop-blur-md p-2.5 px-4 rounded-2xl border border-stone-200 shadow-lg">
+                        <div id="hud-char-avatar" class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center text-xl font-bold shadow-md">
+                            🔥
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-2">
+                                <span id="hud-char-name" class="font-bold text-sm text-stone-900">赤鏽</span>
+                                <span id="hud-char-icon" class="text-xs">🔥</span>
+                            </div>
+                            <!-- Health Bar -->
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <i class="fa-solid fa-heart text-red-500 text-xs"></i>
+                                <div class="w-28 sm:w-36 bg-stone-200 h-2.5 rounded-full overflow-hidden border border-stone-300">
+                                    <div id="player-hp-bar" class="bg-gradient-to-r from-red-500 to-emerald-500 h-full w-full transition-all duration-200"></div>
+                                </div>
+                                <span id="player-hp-text" class="text-[10px] font-mono font-bold text-stone-600">100/100</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Combo & Audio Controls -->
+                    <div class="pointer-events-auto flex items-center gap-3">
+                        <div class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-stone-200 shadow-lg flex items-center gap-2">
+                            <span class="text-xs font-mono font-bold text-stone-400">COMBO</span>
+                            <span id="combo-count" class="text-xl font-black text-amber-500 font-mono">0</span>
+                        </div>
+
+                        <button id="btn-audio" class="w-10 h-10 rounded-2xl bg-white/90 backdrop-blur-md border border-stone-200 text-stone-700 flex items-center justify-center shadow-lg hover:bg-stone-100 active:scale-95 transition">
+                            <i id="audio-icon" class="fa-solid fa-volume-high text-emerald-600"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Reaction Toast -->
+                <div id="reaction-toast" class="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-all duration-300 opacity-0 transform -translate-y-4">
+                    <div class="px-5 py-2.5 rounded-full bg-white/95 border-2 border-orange-500 text-orange-600 flex items-center gap-3 shadow-2xl backdrop-blur-md">
+                        <span id="toast-icons" class="text-2xl">🔥 + ⚡</span>
+                        <span id="toast-text" class="font-black tracking-wider text-sm md:text-base text-stone-900">引燃爆轟</span>
+                    </div>
+                </div>
+
+                <!-- Player Death Restart Overlay -->
+                <div id="death-screen" class="absolute inset-0 z-40 bg-stone-900/80 backdrop-blur-md hidden flex-col items-center justify-center p-6 text-center">
+                    <div class="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-3xl mb-4 animate-bounce">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-white mb-2">角色倒下 ‧ 廢土記憶重組</h3>
+                    <p class="text-stone-300 text-sm max-w-md mb-6">受擊過重導致系統停機！點擊下方按鈕立即重組小隊狀態恢復滿血戰鬥。</p>
+                    <button id="btn-respawn" class="px-8 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-base shadow-xl hover:scale-105 active:scale-95 transition">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> 滿血復甦
+                    </button>
+                </div>
+
+                <!-- Triple Ult Banner -->
+                <div id="triple-ult-banner" class="absolute inset-x-0 top-1/3 z-30 pointer-events-none hidden flex-col items-center justify-center">
+                    <div class="px-8 py-4 bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 text-white rounded-2xl shadow-2xl pulse-soft flex flex-col items-center border-2 border-white">
+                        <div class="text-3xl font-black flex items-center gap-3 text-yellow-100">
+                            <span>⚙️</span><span>⚡</span><span>☣️</span>
+                        </div>
+                        <div class="text-base font-black uppercase tracking-widest mt-1">
+                            TRIPLE ECHO ULTIMATE ‧ 廢土毀滅連鎖
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom In-Game Controls Bar -->
+                <div class="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-stone-900/60 via-stone-900/20 to-transparent z-20 flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-none">
+                    
+                    <!-- Squad Switching Cards -->
+                    <div class="flex items-center gap-2 pointer-events-auto">
+                        <button id="card-rust" class="p-2 sm:px-3 sm:py-2 rounded-2xl bg-white/90 border-2 border-orange-500 transition-all transform active:scale-95 flex items-center gap-2 shadow-lg">
+                            <span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 font-black text-sm flex items-center justify-center">1/Q</span>
+                            <div class="text-left">
+                                <div class="font-bold text-xs text-stone-900">赤鏽 🔥</div>
+                                <div class="w-16 bg-stone-200 h-1 rounded-full mt-1 overflow-hidden">
+                                    <div id="ult-bar-rust" class="bg-orange-500 h-full w-0 transition-all"></div>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button id="card-pulse" class="p-2 sm:px-3 sm:py-2 rounded-2xl bg-white/80 border border-stone-200 opacity-70 transition-all transform active:scale-95 flex items-center gap-2 shadow-lg">
+                            <span class="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-600 font-black text-sm flex items-center justify-center">2/E</span>
+                            <div class="text-left">
+                                <div class="font-bold text-xs text-stone-900">零號 ⚡</div>
+                                <div class="w-16 bg-stone-200 h-1 rounded-full mt-1 overflow-hidden">
+                                    <div id="ult-bar-pulse" class="bg-cyan-500 h-full w-0 transition-all"></div>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button id="card-bio" class="p-2 sm:px-3 sm:py-2 rounded-2xl bg-white/80 border border-stone-200 opacity-70 transition-all transform active:scale-95 flex items-center gap-2 shadow-lg">
+                            <span class="w-8 h-8 rounded-xl bg-green-100 text-green-600 font-black text-sm flex items-center justify-center">3</span>
+                            <div class="text-left">
+                                <div class="font-bold text-xs text-stone-900">骸獸 ☣️</div>
+                                <div class="w-16 bg-stone-200 h-1 rounded-full mt-1 overflow-hidden">
+                                    <div id="ult-bar-bio" class="bg-green-500 h-full w-0 transition-all"></div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Action Key Buttons -->
+                    <div class="flex items-center gap-2 pointer-events-auto">
+                        <button id="btn-attack" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black flex flex-col items-center justify-center shadow-lg active:scale-90 transition">
+                            <i class="fa-solid fa-burst text-sm"></i>
+                            <span class="text-[9px] font-mono">J</span>
+                        </button>
+
+                        <button id="btn-dash" class="w-12 h-12 rounded-2xl bg-white text-stone-800 border border-stone-200 font-bold flex flex-col items-center justify-center shadow-lg active:scale-90 transition">
+                            <i class="fa-solid fa-person-running text-sm"></i>
+                            <span class="text-[9px] font-mono">K</span>
+                        </button>
+
+                        <button id="btn-ult" class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white font-black text-xs flex items-center gap-1.5 shadow-lg opacity-50 cursor-not-allowed transition">
+                            <i class="fa-solid fa-fire text-sm"></i>
+                            <span>大招 (R)</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 7. Footer -->
+    <footer class="bg-stone-900 text-stone-400 py-12 border-t border-stone-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-lg">
+                    <i class="fa-solid fa-sun"></i>
+                </div>
+                <div>
+                    <span class="text-white font-black text-base">《鏽蝕迴響 Rust Echoes》</span>
+                    <p class="text-xs text-stone-500">© 2026 Wasteland Action Prototype. All Rights Reserved.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <span class="px-3 py-1 rounded bg-stone-800 text-stone-300">WebGL 3D Engine</span>
+                <span class="px-3 py-1 rounded bg-stone-800 text-stone-300">Tailwind Light UI</span>
+                <a href="#" class="text-orange-400 hover:underline"><i class="fa-solid fa-arrow-up"></i> 返回頂部</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Game Engine Logic -->
+    <script>
+        // Web Audio Synthesizer
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            playSlash() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(90, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playLaser() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(850, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(220, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playSlam() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playHurt() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playSwap() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playExplosion() {
+                if (!this.enabled || !this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * 0.4;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(900, this.ctx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.4);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // Three.js Game Setup
+        let scene, camera, renderer;
+        let wastelandGround;
+        let activeCharIndex = 0;
+        let comboCount = 0;
+        let comboResetTimer = null;
+
+        // Player Health
+        let playerHp = 100;
+        const maxPlayerHp = 100;
+        let invulnerableTimer = 0;
+
+        // Squad Models Structure
+        const squad = [
+            {
+                id: 'rust',
+                name: '赤鏽',
+                element: 'heat',
+                color: 0xf97316,
+                icon: '🔥',
+                ultEnergy: 0,
+                meshGroup: null,
+                sawBlade1: null,
+                sawBlade2: null,
+                furnaceGlow: null,
+                pos: new THREE.Vector3(0, 0, 0),
+                rotationY: 0
+            },
+            {
+                id: 'pulse',
+                name: '零號',
+                element: 'emp',
+                color: 0x06b6d4,
+                icon: '⚡',
+                ultEnergy: 0,
+                meshGroup: null,
+                electroRings: [],
+                pos: new THREE.Vector3(0, 0, 0),
+                rotationY: 0
+            },
+            {
+                id: 'bio',
+                name: '骸獸',
+                element: 'bio',
+                color: 0x16a34a,
+                icon: '☣️',
+                ultEnergy: 0,
+                meshGroup: null,
+                bioArm: null,
+                pos: new THREE.Vector3(0, 0, 0),
+                rotationY: 0
+            }
+        ];
+
+        const enemies = [];
+        const phantomEchoes = [];
+        const particlePool = [];
+        const keys = {};
+
+        function init3DWorld() {
+            const container = document.getElementById('webgl-container');
+
+            // Scene & Sun Light Wasteland Fog (Light Theme 0xf5f2eb)
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf5f2eb);
+            scene.fog = new THREE.FogExp2(0xf5f2eb, 0.012);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 12, 18);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Light Theme Lighting
+            const ambientLight = new THREE.AmbientLight(0xfff8ee, 0.9);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffd0a0, 1.4);
+            sunLight.position.set(30, 50, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+
+            // Pale Desert Ground
+            const groundGeo = new THREE.PlaneGeometry(300, 300, 40, 40);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: 0xdecbb5,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            wastelandGround = new THREE.Mesh(groundGeo, groundMat);
+            wastelandGround.rotation.x = -Math.PI / 2;
+            wastelandGround.receiveShadow = true;
+            scene.add(wastelandGround);
+
+            // Metallic Scrap Towers
+            createWastelandScrapProps();
+
+            // Build 3D Models
+            buildCharacterModels();
+
+            // Spawn Initial Enemies
+            for (let i = 0; i < 5; i++) {
+                spawn3DEnemy();
+            }
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function buildCharacterModels() {
+            // 1. 赤鏽 (Rust-Blade)
+            const rustGroup = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(1.2, 1.8, 0.8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.4 });
+            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.position.y = 1.4;
+            bodyMesh.castShadow = true;
+            rustGroup.add(bodyMesh);
+
+            const furnaceGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.4, 12);
+            const furnaceMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, metalness: 0.8 });
+            const furnaceMesh = new THREE.Mesh(furnaceGeo, furnaceMat);
+            furnaceMesh.position.set(0, 1.6, -0.6);
+            rustGroup.add(furnaceMesh);
+
+            const furnaceGlowGeo = new THREE.SphereGeometry(0.35, 12, 12);
+            const furnaceGlowMat = new THREE.MeshBasicMaterial({ color: 0xff4500 });
+            const furnaceGlow = new THREE.Mesh(furnaceGlowGeo, furnaceGlowMat);
+            furnaceGlow.position.set(0, 1.8, -0.6);
+            rustGroup.add(furnaceGlow);
+            squad[0].furnaceGlow = furnaceGlow;
+
+            const sawGeo = new THREE.TorusGeometry(0.7, 0.1, 8, 24);
+            const sawMat = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.9 });
+            const saw1 = new THREE.Mesh(sawGeo, sawMat);
+            saw1.position.set(1.1, 1.4, 0.4);
+            rustGroup.add(saw1);
+            squad[0].sawBlade1 = saw1;
+
+            const saw2 = new THREE.Mesh(sawGeo, sawMat);
+            saw2.position.set(-1.1, 1.4, 0.4);
+            rustGroup.add(saw2);
+            squad[0].sawBlade2 = saw2;
+
+            squad[0].meshGroup = rustGroup;
+            scene.add(rustGroup);
+
+            // 2. 零號 (Pulse-Zero)
+            const pulseGroup = new THREE.Group();
+            const pulseBodyGeo = new THREE.CylinderGeometry(0.5, 0.4, 1.8, 12);
+            const pulseBodyMat = new THREE.MeshStandardMaterial({ color: 0x0891b2, metalness: 0.8 });
+            const pulseBody = new THREE.Mesh(pulseBodyGeo, pulseBodyMat);
+            pulseBody.position.y = 1.4;
+            pulseGroup.add(pulseBody);
+
+            const ringGeo = new THREE.TorusGeometry(1.2, 0.06, 8, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            ring1.position.y = 1.4;
+            ring1.rotation.x = Math.PI / 3;
+            pulseGroup.add(ring1);
+            squad[1].electroRings.push(ring1);
+
+            squad[1].meshGroup = pulseGroup;
+            pulseGroup.visible = false;
+            scene.add(pulseGroup);
+
+            // 3. 骸獸 (Bio-Beast)
+            const bioGroup = new THREE.Group();
+            const bioBodyGeo = new THREE.BoxGeometry(1.4, 1.8, 1.0);
+            const bioBodyMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+            const bioBody = new THREE.Mesh(bioBodyGeo, bioBodyMat);
+            bioBody.position.y = 1.4;
+            bioGroup.add(bioBody);
+
+            const bioArmGeo = new THREE.SphereGeometry(0.9, 16, 16);
+            const bioArmMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x15803d });
+            const bioArm = new THREE.Mesh(bioArmGeo, bioArmMat);
+            bioArm.position.set(1.4, 1.4, 0);
+            bioGroup.add(bioArm);
+            squad[2].bioArm = bioArm;
+
+            squad[2].meshGroup = bioGroup;
+            bioGroup.visible = false;
+            scene.add(bioGroup);
+        }
+
+        function createWastelandScrapProps() {
+            const scrapMat = new THREE.MeshStandardMaterial({ color: 0x887766, roughness: 0.7 });
+            for (let i = 0; i < 16; i++) {
+                const height = 5 + Math.random() * 8;
+                const tower = new THREE.Mesh(new THREE.BoxGeometry(2, height, 2), scrapMat);
+                tower.position.y = height / 2;
+                tower.castShadow = true;
+                tower.receiveShadow = true;
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 30 + Math.random() * 70;
+                tower.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                scene.add(tower);
+            }
+        }
+
+        function spawn3DEnemy() {
+            if (enemies.length >= 8) return;
+
+            const enemyGroup = new THREE.Group();
+            const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 2.0, 12);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1.0;
+            body.castShadow = true;
+            enemyGroup.add(body);
+
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), eyeMat);
+            eye.position.set(0, 1.5, 0.8);
+            enemyGroup.add(eye);
+
+            const activeChar = squad[activeCharIndex];
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 15 + Math.random() * 20;
+
+            enemyGroup.position.set(
+                activeChar.pos.x + Math.cos(angle) * dist,
+                0,
+                activeChar.pos.z + Math.sin(angle) * dist
+            );
+
+            scene.add(enemyGroup);
+            enemies.push({ group: enemyGroup, hp: 100, maxHp: 100, elementTag: null });
+        }
+
+        function swapCharacter(targetIndex) {
+            if (targetIndex === activeCharIndex || playerHp <= 0) return;
+
+            sound.playSwap();
+            const prevChar = squad[activeCharIndex];
+            const nextChar = squad[targetIndex];
+
+            create3DTacticalEcho(prevChar);
+
+            prevChar.meshGroup.visible = false;
+            nextChar.pos.copy(prevChar.pos);
+            nextChar.rotationY = prevChar.rotationY;
+            nextChar.meshGroup.position.copy(nextChar.pos);
+            nextChar.meshGroup.rotation.y = nextChar.rotationY;
+            nextChar.meshGroup.visible = true;
+
+            activeCharIndex = targetIndex;
+            triggerAttack();
+            updateHUD();
+        }
+
+        function create3DTacticalEcho(charData) {
+            const echoGroup = new THREE.Group();
+            echoGroup.position.copy(charData.pos);
+
+            let mesh;
+            if (charData.id === 'rust') {
+                const geo = new THREE.TorusGeometry(2.5, 0.15, 12, 32);
+                mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true }));
+                mesh.rotation.x = Math.PI / 2;
+            } else if (charData.id === 'pulse') {
+                const geo = new THREE.CylinderGeometry(0.2, 0.8, 4.0, 12);
+                mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true }));
+                mesh.position.y = 2.0;
+            } else {
+                const geo = new THREE.CircleGeometry(3.5, 24);
+                mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.6 }));
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.y = 0.05;
+            }
+
+            echoGroup.add(mesh);
+            scene.add(echoGroup);
+            phantomEchoes.push({ group: echoGroup, mesh: mesh, element: charData.element, life: 3.5 });
+        }
+
+        function triggerAttack() {
+            if (playerHp <= 0) return;
+
+            const active = squad[activeCharIndex];
+            addCombo(1);
+
+            const dirX = Math.sin(active.rotationY);
+            const dirZ = Math.cos(active.rotationY);
+            active.pos.x += dirX * 1.5;
+            active.pos.z += dirZ * 1.5;
+
+            if (active.id === 'rust') {
+                sound.playSlash();
+                create3DSlashFX(active.pos, active.rotationY, 0xf97316);
+                check3DHitbox(active.pos, 4.0, 'heat', 25);
+            } else if (active.id === 'pulse') {
+                sound.playLaser();
+                check3DHitbox(active.pos, 6.0, 'emp', 20);
+            } else if (active.id === 'bio') {
+                sound.playSlam();
+                check3DHitbox(active.pos, 5.0, 'bio', 35);
+            }
+
+            active.ultEnergy = Math.min(100, active.ultEnergy + 15);
+            updateHUD();
+        }
+
+        function triggerDash() {
+            if (playerHp <= 0) return;
+            const active = squad[activeCharIndex];
+            sound.playSwap();
+
+            active.pos.x += Math.sin(active.rotationY) * 4.0;
+            active.pos.z += Math.cos(active.rotationY) * 4.0;
+        }
+
+        function triggerUlt() {
+            if (playerHp <= 0) return;
+
+            const active = squad[activeCharIndex];
+            const allMaxed = squad.every(c => c.ultEnergy >= 100);
+
+            if (allMaxed) {
+                sound.playExplosion();
+                const banner = document.getElementById('triple-ult-banner');
+                banner.classList.remove('hidden');
+                banner.classList.add('flex');
+
+                enemies.forEach(e => {
+                    e.hp -= 120;
+                    create3DExplosionFX(e.group.position, 0xf59e0b, 30);
+                });
+
+                squad.forEach(c => c.ultEnergy = 0);
+                updateHUD();
+
+                setTimeout(() => {
+                    banner.classList.add('hidden');
+                    banner.classList.remove('flex');
+                }, 2000);
+                return;
+            }
+
+            if (active.ultEnergy >= 100) {
+                active.ultEnergy = 0;
+                sound.playExplosion();
+                create3DExplosionFX(active.pos, active.color, 35);
+
+                enemies.forEach(e => {
+                    if (e.group.position.distanceTo(active.pos) < 10) {
+                        e.hp -= 80;
+                    }
+                });
+                updateHUD();
+            }
+        }
+
+        function check3DHitbox(originPos, range, attackElement, damage) {
+            enemies.forEach(enemy => {
+                const dist = enemy.group.position.distanceTo(originPos);
+                if (dist <= range) {
+                    enemy.hp -= damage;
+
+                    phantomEchoes.forEach(echo => {
+                        if (enemy.group.position.distanceTo(echo.group.position) < 5.0) {
+                            trigger3DReaction(enemy, attackElement, echo.element);
+                        }
+                    });
+
+                    if (enemy.elementTag && enemy.elementTag !== attackElement) {
+                        trigger3DReaction(enemy, attackElement, enemy.elementTag);
+                        enemy.elementTag = null;
+                    } else {
+                        enemy.elementTag = attackElement;
+                    }
+                }
+            });
+        }
+
+        function trigger3DReaction(enemy, elemA, elemB) {
+            sound.playExplosion();
+            addCombo(3);
+
+            let toastText = '💥 引燃爆轟';
+            let icons = '🔥 + ⚡';
+            let color = '#f97316';
+
+            const pair = [elemA, elemB].sort().join('+');
+            if (pair === 'bio+emp') {
+                toastText = '⚡ 衰變超載';
+                icons = '⚡ + ☣️';
+                color = '#06b6d4';
+            } else if (pair === 'bio+heat') {
+                toastText = '🌋 溶岩腐蝕';
+                icons = '🧪 + 🔥';
+                color = '#16a34a';
+            }
+
+            create3DExplosionFX(enemy.group.position, 0xf97316, 25);
+            showReactionToast(icons, toastText, color);
+        }
+
+        function create3DSlashFX(pos, heading, colorHex) {
+            for (let i = 0; i < 10; i++) {
+                const p = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: colorHex }));
+                p.position.copy(pos);
+                p.position.y += 1.2;
+                scene.add(p);
+                particlePool.push({ mesh: p, vx: (Math.random()-0.5)*0.5, vy: 0.2, vz: (Math.random()-0.5)*0.5, life: 0.3 });
+            }
+        }
+
+        function create3DExplosionFX(pos, colorHex, count) {
+            for (let i = 0; i < count; i++) {
+                const p = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshBasicMaterial({ color: colorHex }));
+                p.position.copy(pos);
+                p.position.y += 1.0;
+                scene.add(p);
+                particlePool.push({
+                    mesh: p,
+                    vx: (Math.random()-0.5)*0.8,
+                    vy: Math.random()*0.8,
+                    vz: (Math.random()-0.5)*0.8,
+                    life: 0.4
+                });
+            }
+        }
+
+        function takePlayerDamage(amount) {
+            if (invulnerableTimer > 0 || playerHp <= 0) return;
+
+            playerHp = Math.max(0, playerHp - amount);
+            invulnerableTimer = 60; // 1 second iframe
+            sound.playHurt();
+
+            updateHUD();
+
+            if (playerHp <= 0) {
+                document.getElementById('death-screen').classList.remove('hidden');
+                document.getElementById('death-screen').classList.add('flex');
+            }
+        }
+
+        function respawnPlayer() {
+            playerHp = maxPlayerHp;
+            invulnerableTimer = 120;
+            document.getElementById('death-screen').classList.add('hidden');
+            document.getElementById('death-screen').classList.remove('flex');
+            updateHUD();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === '1' || e.key.toLowerCase() === 'q') swapCharacter(0);
+            if (e.key === '2' || e.key.toLowerCase() === 'e') swapCharacter(1);
+            if (e.key === '3') swapCharacter(2);
+            if (e.key.toLowerCase() === 'j') triggerAttack();
+            if (e.key.toLowerCase() === 'k' || e.key === ' ') triggerDash();
+            if (e.key.toLowerCase() === 'r') triggerUlt();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (invulnerableTimer > 0) invulnerableTimer--;
+
+            const active = squad[activeCharIndex];
+
+            // Keyboard Controls (W: 前, A: 左, S: 後, D: 右)
+            if (playerHp > 0) {
+                let moveX = 0;
+                let moveZ = 0;
+
+                if (keys['w'] || keys['arrowup']) moveZ -= 1;
+                if (keys['s'] || keys['arrowdown']) moveZ += 1;
+                if (keys['a'] || keys['arrowleft']) moveX -= 1;
+                if (keys['d'] || keys['arrowright']) moveX += 1;
+
+                if (moveX !== 0 || moveZ !== 0) {
+                    const length = Math.hypot(moveX, moveZ);
+                    const normX = moveX / length;
+                    const normZ = moveZ / length;
+
+                    active.rotationY = Math.atan2(normX, normZ);
+                    active.pos.x += normX * 0.22;
+                    active.pos.z += normZ * 0.22;
+                }
+            }
+
+            active.meshGroup.position.copy(active.pos);
+            active.meshGroup.rotation.y = active.rotationY;
+
+            // Camera Follow
+            camera.position.x += (active.pos.x - camera.position.x) * 0.08;
+            camera.position.z += (active.pos.z + 16 - camera.position.z) * 0.08;
+            camera.lookAt(active.pos.x, active.pos.y + 1.2, active.pos.z);
+
+            // Update Echoes
+            for (let i = phantomEchoes.length - 1; i >= 0; i--) {
+                const echo = phantomEchoes[i];
+                echo.life -= 0.016;
+                echo.mesh.rotation.y += 0.05;
+
+                if (echo.life <= 0) {
+                    scene.remove(echo.group);
+                    phantomEchoes.splice(i, 1);
+                }
+            }
+
+            // Update Enemies & Attack Player
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                if (enemy.hp <= 0) {
+                    create3DExplosionFX(enemy.group.position, 0xef4444, 20);
+                    scene.remove(enemy.group);
+                    enemies.splice(i, 1);
+                    addCombo(2);
+                    setTimeout(spawn3DEnemy, 2500);
+                    continue;
+                }
+
+                const dir = new THREE.Vector3().subVectors(active.pos, enemy.group.position);
+                dir.y = 0;
+                const dist = dir.length();
+
+                if (dist > 1.8) {
+                    dir.normalize().multiplyScalar(0.07);
+                    enemy.group.position.add(dir);
+                } else {
+                    // Attack Player!
+                    takePlayerDamage(8);
+                }
+            }
+
+            // Update Particles
+            for (let i = particlePool.length - 1; i >= 0; i--) {
+                const p = particlePool[i];
+                p.mesh.position.x += p.vx;
+                p.mesh.position.y += p.vy;
+                p.mesh.position.z += p.vz;
+                p.life -= 0.02;
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particlePool.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('webgl-container');
+            if (!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function addCombo(amount) {
+            comboCount += amount;
+            document.getElementById('combo-count').innerText = comboCount;
+
+            if (comboResetTimer) clearTimeout(comboResetTimer);
+            comboResetTimer = setTimeout(() => {
+                comboCount = 0;
+                document.getElementById('combo-count').innerText = comboCount;
+            }, 3000);
+        }
+
+        function showReactionToast(icons, text, color) {
+            const toast = document.getElementById('reaction-toast');
+            document.getElementById('toast-icons').innerText = icons;
+            document.getElementById('toast-text').innerText = text;
+            toast.style.borderColor = color;
+
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-4');
+            }, 1200);
+        }
+
+        function updateHUD() {
+            const active = squad[activeCharIndex];
+
+            // Player HP
+            const hpBar = document.getElementById('player-hp-bar');
+            const hpText = document.getElementById('player-hp-text');
+            if (hpBar) hpBar.style.width = `${(playerHp / maxPlayerHp) * 100}%`;
+            if (hpText) hpText.innerText = `${playerHp}/${maxPlayerHp}`;
+
+            // Character HUD
+            document.getElementById('hud-char-avatar').innerText = active.icon;
+            document.getElementById('hud-char-name').innerText = active.name;
+            document.getElementById('hud-char-icon').innerText = active.icon;
+
+            // Ult Bars
+            squad.forEach(c => {
+                const bar = document.getElementById(`ult-bar-${c.id}`);
+                if (bar) bar.style.width = `${c.ultEnergy}%`;
+            });
+
+            // Cards Highlight
+            const cards = [
+                document.getElementById('card-rust'),
+                document.getElementById('card-pulse'),
+                document.getElementById('card-bio')
+            ];
+
+            cards.forEach((card, idx) => {
+                if (idx === activeCharIndex) {
+                    card.classList.remove('opacity-70', 'border-stone-200');
+                    card.classList.add('border-2', 'opacity-100', 'scale-105');
+                } else {
+                    card.classList.add('opacity-70');
+                    card.classList.remove('scale-105');
+                }
+            });
+
+            // Ult Button State
+            const ultBtn = document.getElementById('btn-ult');
+            const allMaxed = squad.every(c => c.ultEnergy >= 100);
+            const activeMaxed = squad[activeCharIndex].ultEnergy >= 100;
+
+            if (allMaxed || activeMaxed) {
+                ultBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                ultBtn.classList.add('glow-orange', 'animate-pulse');
+            } else {
+                ultBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                ultBtn.classList.remove('glow-orange', 'animate-pulse');
+            }
+        }
+
+        // Squad Switch Buttons
+        document.getElementById('card-rust').addEventListener('click', () => swapCharacter(0));
+        document.getElementById('card-pulse').addEventListener('click', () => swapCharacter(1));
+        document.getElementById('card-bio').addEventListener('click', () => swapCharacter(2));
+
+        // Touch Control Buttons
+        document.getElementById('btn-attack').addEventListener('click', () => triggerAttack());
+        document.getElementById('btn-dash').addEventListener('click', () => triggerDash());
+        document.getElementById('btn-ult').addEventListener('click', () => triggerUlt());
+        document.getElementById('btn-respawn').addEventListener('click', () => respawnPlayer());
+
+        // Audio Toggle
+        document.getElementById('btn-audio').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            const icon = document.getElementById('audio-icon');
+            if (sound.enabled) {
+                icon.className = 'fa-solid fa-volume-high text-emerald-600';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-red-500';
+            }
+        });
+
+        // Start Game Engine on Window Load
+        window.onload = function() {
+            init3DWorld();
+            animate();
+        };
+    </script>
+</body>
+</html>
